@@ -6,6 +6,7 @@ import {
   useSensor,
   useSensors,
   closestCorners,
+  useDroppable,
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
@@ -86,6 +87,8 @@ function Group({
 }) {
   const [adding, setAdding] = useState(false)
   const [text, setText] = useState('')
+  // 注册整个分组为放置目标，空分组也能接收拖入
+  const { setNodeRef, isOver } = useDroppable({ id })
 
   function submit() {
     if (text.trim()) onAdd(text.trim())
@@ -105,7 +108,7 @@ function Group({
           <span className="meta">{issues.length} issues</span>
         </div>
       </div>
-      <div className="block-body">
+      <div className="block-body" ref={setNodeRef} style={isOver ? { background: 'rgba(0,82,204,0.08)' } : undefined}>
         <SortableContext items={issues.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           {issues.length === 0 && <div className="drop-empty">把任务拖到这里</div>}
           {issues.map((i) => (
