@@ -1,7 +1,7 @@
 // 与数据库对齐的 TypeScript 类型
 
 export type IssueType = 'epic' | 'story' | 'task' | 'bug'
-export type IssueStatus = 'todo' | 'in_progress' | 'in_review' | 'done'
+export type IssueStatus = 'todo' | 'in_progress' | 'done'
 export type Priority = 'highest' | 'high' | 'medium' | 'low' | 'lowest'
 export type SprintStatus = 'future' | 'active' | 'completed'
 
@@ -54,11 +54,10 @@ export interface Issue {
 export const STATUS_LABELS: Record<IssueStatus, string> = {
   todo: 'To Do',
   in_progress: 'In Progress',
-  in_review: 'In Review',
   done: 'Done',
 }
 
-export const STATUS_ORDER: IssueStatus[] = ['todo', 'in_progress', 'in_review', 'done']
+export const STATUS_ORDER: IssueStatus[] = ['todo', 'in_progress', 'done']
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
   highest: 'Highest',

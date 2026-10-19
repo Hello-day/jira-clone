@@ -6,7 +6,7 @@ import { Avatar } from './Avatar'
 import type { Project } from '../types'
 
 export function MembersModal({ project, onClose }: { project: Project; onClose: () => void }) {
-  const { profiles, session } = useAuth()
+  const { profiles, session, loadProfiles } = useAuth()
   const { loadProjects } = useData()
   const [memberIds, setMemberIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
@@ -17,6 +17,7 @@ export function MembersModal({ project, onClose }: { project: Project; onClose: 
   async function reload() {
     setLoading(true)
     try {
+      if (profiles.length === 0) await loadProfiles()
       setMemberIds(await listMemberIds(project.id))
     } catch (e: any) {
       setErr(e?.message ?? '加载成员失败')

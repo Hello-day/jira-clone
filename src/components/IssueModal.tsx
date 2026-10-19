@@ -10,7 +10,7 @@ const PRIORITIES = Object.keys(PRIORITY_LABELS) as (keyof typeof PRIORITY_LABELS
 
 export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => void }) {
   const { profiles } = useAuth()
-  const { patchIssueOptimistic, removeIssueLocal } = useData()
+  const { patchIssueOptimistic, removeIssueLocal, memberIds } = useData()
 
   const [title, setTitle] = useState(issue.title)
   const [description, setDescription] = useState(issue.description ?? '')
@@ -114,7 +114,7 @@ export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => vo
             <label>Assignee</label>
             <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
               <option value="">Unassigned</option>
-              {profiles.map((p) => (
+              {profiles.filter((p) => memberIds.includes(p.id)).map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>

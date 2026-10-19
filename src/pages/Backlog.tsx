@@ -22,7 +22,7 @@ import { useAuth } from '../store/auth'
 import type { Issue, IssueType, Sprint } from '../types'
 import { STATUS_LABELS, TYPE_META } from '../types'
 import { createIssue, computeRank } from '../api/issues'
-import { createSprint, startSprint, completeSprint } from '../api/sprints'
+import { createSprint, startSprint, completeSprint, deleteSprint } from '../api/sprints'
 import { Avatar } from '../components/Avatar'
 import { IssueModal } from '../components/IssueModal'
 import { SprintModal } from '../components/SprintModal'
@@ -155,14 +155,16 @@ function Group({
 }
 
 export function Backlog() {
-  const { currentProjectId, sprints, issues, reloadBoard, patchIssueOptimistic, upsertIssueLocal, upsertSprintLocal } = useData()
+  const { currentProjectId, sprints, issues, reloadBoard, patchIssueOptimistic, upsertIssueLocal, upsertSprintLocal, removeSprintLocal } = useData()
   const [active, setActive] = useState<Issue | null>(null)
   const [opened, setOpened] = useState<Issue | null>(null)
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
+  const [expandedCompleted, setExpandedCompleted] = useState<Record<string, boolean>>({})
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   // 分组：每个未完成 sprint 一组 + backlog 一组
   const openSprints = useMemo(() => sprints.filter((s) => s.status !== 'completed'), [sprints])
+  const completedSprints = useMemo(() => sprints.filter((s) => s.status === 'completed'), [sprints])
 
   const grouped = useMemo(() => {
     const map: Record<string, Issue[]> = { backlog: [] }
@@ -236,8 +238,12 @@ export function Backlog() {
   async function onCreateSprint() {
     if (!currentProjectId) return
     const n = sprints.length + 1
-    const s = await createSprint(currentProjectId, `Sprint ${n}`)
-    upsertSprintLocal(s)
+    try {
+      const s = await createSprint(currentProjectId, `Sprint ${n}`)
+      upsertSprintLocal(s)
+    } catch (e: any) {
+      alert(e?.message ?? 'Create sprint failed')
+    }
   }
 
   async function onStartSprint(s: Sprint) {
@@ -248,12 +254,21 @@ export function Backlog() {
   }
 
   async function onCompleteSprint(s: Sprint) {
-    if (!confirm(`完成 ${s.name}？未完成的任务会回到 Backlog。`)) return
+    if (!confirm(`完成 ${s.name}？未完成的任务会回到 Backlog，已完成的任务保留在 Sprint 中。`)) return
     // 把该 sprint 下未完成的 issue 移回 backlog
     const unfinished = issues.filter((i) => i.sprint_id === s.id && i.status !== 'done')
     await Promise.all(unfinished.map((i) => patchIssueOptimistic(i.id, { sprint_id: null })))
     const updated = await completeSprint(s.id)
     upsertSprintLocal(updated)
+    await reloadBoard()
+  }
+
+  async function onDeleteSprint(s: Sprint) {
+    if (!confirm(`删除 ${s.name}？Sprint 中所有任务会回到 Backlog。`)) return
+    const inSprint = issues.filter((i) => i.sprint_id === s.id)
+    await Promise.all(inSprint.map((i) => patchIssueOptimistic(i.id, { sprint_id: null })))
+    await deleteSprint(s.id)
+    removeSprintLocal(s.id)
     await reloadBoard()
   }
 
@@ -283,9 +298,15 @@ export function Backlog() {
             onEdit={() => setEditingSprint(s)}
             headerExtra={
               s.status === 'future' ? (
-                <button className="btn btn-sm btn-primary" onClick={() => onStartSprint(s)}>Start sprint</button>
+                <>
+                  <button className="btn btn-sm btn-primary" onClick={() => onStartSprint(s)}>Start sprint</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => onDeleteSprint(s)}>Delete</button>
+                </>
               ) : (
-                <button className="btn btn-sm" onClick={() => onCompleteSprint(s)}>Complete sprint</button>
+                <>
+                  <button className="btn btn-sm" onClick={() => onCompleteSprint(s)}>Complete sprint</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => onDeleteSprint(s)}>Delete</button>
+                </>
               )
             }
           />
@@ -301,6 +322,47 @@ export function Backlog() {
             <button className="btn btn-sm" onClick={onCreateSprint}>+ Create sprint</button>
           }
         />
+
+        {completedSprints.map((s) => {
+          const doneIssues = issues.filter((i) => i.sprint_id === s.id && i.status === 'done')
+          const expanded = !!expandedCompleted[s.id]
+          return (
+            <div key={s.id} className="sprint-block sprint-block--completed">
+              <div className="block-head">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    className="btn btn-subtle btn-sm"
+                    onClick={() => setExpandedCompleted((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
+                    style={{ padding: '0 4px' }}
+                  >
+                    {expanded ? '▾' : '▸'}
+                  </button>
+                  <span className="title" style={{ opacity: 0.6 }}>{s.name}</span>
+                  <span className="meta">✓ 已完成</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span className="meta">{doneIssues.length} issues</span>
+                  <button className="btn btn-sm btn-danger" onClick={() => onDeleteSprint(s)}>Delete</button>
+                </div>
+              </div>
+              {expanded && (
+                <div className="block-body">
+                  {doneIssues.length === 0 && <div className="drop-empty">没有已完成的任务</div>}
+                  {doneIssues.map((i) => (
+                    <div key={i.id} className="issue-row" onClick={() => setOpened(i)}>
+                      <span className="type-icon" style={{ color: TYPE_META[i.type].color }}>{TYPE_META[i.type].icon}</span>
+                      <span className="key">{i.key}</span>
+                      <span className="title">{i.title}</span>
+                      <span className="status-pill" style={{ background: STATUS_COLORS[i.status] + '22', color: STATUS_COLORS[i.status] }}>
+                        {STATUS_LABELS[i.status]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
 
         <DragOverlay>
           {active ? (

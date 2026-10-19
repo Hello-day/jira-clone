@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -89,12 +89,21 @@ function Column({
 
 export function Board() {
   const { currentProjectId, sprints, issues, memberIds, patchIssueOptimistic } = useData()
-  const { profiles } = useAuth()
+  const { profiles, profile } = useAuth()
   const projectMembers = useMemo(() => profiles.filter((p) => memberIds.includes(p.id)), [profiles, memberIds])
   const [active, setActive] = useState<Issue | null>(null)
   const [opened, setOpened] = useState<Issue | null>(null)
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
+
+  // 进入页面默认勾选自己（仅首次 profile 就绪时）
+  const defaulted = useRef(false)
+  useEffect(() => {
+    if (!defaulted.current && profile) {
+      setFilterAssignee(profile.id)
+      defaulted.current = true
+    }
+  }, [profile])
 
   const activeSprint = useMemo(() => sprints.find((s) => s.status === 'active'), [sprints])
 
@@ -106,7 +115,7 @@ export function Board() {
   }, [issues, activeSprint, filterAssignee])
 
   const byStatus = useMemo(() => {
-    const map: Record<IssueStatus, Issue[]> = { todo: [], in_progress: [], in_review: [], done: [] }
+    const map: Record<IssueStatus, Issue[]> = { todo: [], in_progress: [], done: [] }
     boardIssues.forEach((i) => map[i.status].push(i))
     STATUS_ORDER.forEach((s) => map[s].sort((a, b) => a.rank - b.rank))
     return map

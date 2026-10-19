@@ -22,6 +22,7 @@ interface DataState {
   upsertIssueLocal: (issue: Issue) => void
   removeIssueLocal: (id: string) => void
   upsertSprintLocal: (sprint: Sprint) => void
+  removeSprintLocal: (id: string) => void
 }
 
 export const useData = create<DataState>((set, get) => ({
@@ -101,4 +102,6 @@ export const useData = create<DataState>((set, get) => ({
         : [...get().sprints, sprint],
     })
   },
+
+  removeSprintLocal: (id) => set({ sprints: get().sprints.filter((s) => s.id !== id) }),
 }))

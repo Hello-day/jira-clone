@@ -75,6 +75,15 @@ a {
 .btn-subtle:hover {
   background: rgba(9, 30, 66, 0.08);
 }
+.btn-danger {
+  background: transparent;
+  color: #6b778c;
+  border-color: #6b778c44;
+}
+.btn-danger:hover {
+  background: rgba(9, 30, 66, 0.08);
+  color: #42526e;
+}
 
 input,
 select,
