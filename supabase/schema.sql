@@ -81,6 +81,7 @@ create index if not exists issues_sprint_idx  on public.issues(sprint_id);
 -- ----------------------------------------------------------------------------
 -- 注册触发器：auth.users 新增 → 自动插入 profiles
 -- 用户注册时在 options.data 里传 name；没传就用邮箱前缀。
+-- 邮件验证开启时，等 email_confirmed_at 有值后才写入 profiles。
 -- ----------------------------------------------------------------------------
 create or replace function public.handle_new_user()
 returns trigger
@@ -90,12 +91,16 @@ as $$
 declare
   colors text[] := array['#0052CC','#36B37E','#FF5630','#6554C0','#FFAB00','#00B8D9'];
 begin
-  insert into public.profiles (id, name, avatar_color)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    colors[1 + floor(random() * array_length(colors,1))::int]
-  );
+  -- 仅在邮件已确认时写入（关闭邮件验证时 confirmed_at 在 insert 时就非 null）
+  if new.email_confirmed_at is not null then
+    insert into public.profiles (id, name, avatar_color)
+    values (
+      new.id,
+      coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+      colors[1 + floor(random() * array_length(colors,1))::int]
+    )
+    on conflict (id) do nothing;
+  end if;
   return new;
 end;
 $$;
@@ -104,6 +109,33 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- 邮件确认完成时（update 导致 email_confirmed_at 从 null 变为非 null）写入 profiles
+create or replace function public.handle_user_confirmed()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+declare
+  colors text[] := array['#0052CC','#36B37E','#FF5630','#6554C0','#FFAB00','#00B8D9'];
+begin
+  if old.email_confirmed_at is null and new.email_confirmed_at is not null then
+    insert into public.profiles (id, name, avatar_color)
+    values (
+      new.id,
+      coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+      colors[1 + floor(random() * array_length(colors,1))::int]
+    )
+    on conflict (id) do nothing;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_confirmed on auth.users;
+create trigger on_auth_user_confirmed
+  after update on auth.users
+  for each row execute function public.handle_user_confirmed();
 
 -- ----------------------------------------------------------------------------
 -- 建项目的 RPC：原子地创建项目 + 把创建者加为成员，并设为 lead
