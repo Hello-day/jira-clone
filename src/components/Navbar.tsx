@@ -143,9 +143,9 @@ export function Navbar() {
                   {pwdErr && <div style={{ color: '#de350b', fontSize: 12, marginTop: 4 }}>{pwdErr}</div>}
                 </div>
               ) : (
-                <button onClick={() => { setChangingPwd(true); setPwdText(''); setPwdErr(null) }}>修改密码</button>
+                <button onMouseDown={e => e.preventDefault()} onClick={() => { setChangingPwd(true); setPwdText(''); setPwdErr(null) }}>修改密码</button>
               )}
-              <button onClick={doLogout}>Log out</button>
+              <button onMouseDown={e => e.preventDefault()} onClick={doLogout}>Log out</button>
             </div>
           )}
         </div>
