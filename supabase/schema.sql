@@ -219,6 +219,10 @@ create policy projects_read on public.projects
 drop policy if exists projects_update on public.projects;
 create policy projects_update on public.projects
   for update to authenticated using (public.is_member(id));
+-- 只有项目负责人（lead）能删除项目（级联删除其 sprints/issues/members）
+drop policy if exists projects_delete on public.projects;
+create policy projects_delete on public.projects
+  for delete to authenticated using (lead_id = auth.uid());
 
 -- project_members：成员可读本项目成员；可把自己加入（供 RPC/直连）
 drop policy if exists members_read on public.project_members;

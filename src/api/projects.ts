@@ -21,6 +21,12 @@ export async function createProject(key: string, name: string): Promise<Project>
   return data as Project
 }
 
+// 删除项目（级联删除其 sprints / issues / members）
+export async function deleteProject(projectId: string): Promise<void> {
+  const { error } = await supabase.from('projects').delete().eq('id', projectId)
+  if (error) throw error
+}
+
 // 把某个用户加入项目成员
 export async function addMember(projectId: string, userId: string): Promise<void> {
   const { error } = await supabase

@@ -44,3 +44,15 @@ export async function listProfiles(): Promise<Profile[]> {
   if (error) throw error
   return (data ?? []) as Profile[]
 }
+
+// 更新当前用户的用户名（RLS 限制只能改自己的）
+export async function updateMyName(userId: string, name: string): Promise<Profile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ name })
+    .eq('id', userId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Profile
+}

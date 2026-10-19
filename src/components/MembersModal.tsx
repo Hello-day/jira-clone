@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../store/auth'
-import { addMember, removeMember, listMemberIds } from '../api/projects'
+import { useData } from '../store/data'
+import { addMember, removeMember, listMemberIds, deleteProject } from '../api/projects'
 import { Avatar } from './Avatar'
 import type { Project } from '../types'
 
 export function MembersModal({ project, onClose }: { project: Project; onClose: () => void }) {
   const { profiles, session } = useAuth()
+  const { loadProjects } = useData()
   const [memberIds, setMemberIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -63,6 +65,22 @@ export function MembersModal({ project, onClose }: { project: Project; onClose: 
     }
   }
 
+  const isLead = session?.user.id === project.lead_id
+
+  async function doDeleteProject() {
+    if (!confirm(`确定删除项目「${project.name}」？\n该项目下的所有 Sprint 和任务都会被永久删除，无法恢复。`)) return
+    setBusy(true)
+    setErr(null)
+    try {
+      await deleteProject(project.id)
+      await loadProjects() // 自动切换到剩余项目或清空
+      onClose()
+    } catch (e: any) {
+      setErr(e?.message ?? '删除失败')
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ width: 460 }} onClick={(e) => e.stopPropagation()}>
@@ -113,6 +131,22 @@ export function MembersModal({ project, onClose }: { project: Project; onClose: 
                 )}
               </div>
             ))
+          )}
+        </div>
+
+        {/* 危险区：仅项目负责人可删除整个项目 */}
+        <div style={{ borderTop: '1px solid var(--j-border)', marginTop: 8, paddingTop: 14 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--j-red)', marginBottom: 6 }}>
+            危险操作
+          </label>
+          {isLead ? (
+            <button className="btn" style={{ color: 'var(--j-red)', border: '1px solid #ffbdad' }} onClick={doDeleteProject} disabled={busy}>
+              🗑️ 删除此项目（含所有 Sprint 与任务）
+            </button>
+          ) : (
+            <div style={{ color: 'var(--j-subtle)', fontSize: 13 }}>
+              只有项目负责人可以删除项目。
+            </div>
           )}
         </div>
       </div>

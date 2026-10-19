@@ -13,10 +13,13 @@ const PAGE_TITLES: Record<string, string> = {
 }
 
 export function Navbar() {
-  const { profile, clear } = useAuth()
+  const { profile, clear, updateName } = useAuth()
   const { projects, currentProjectId } = useData()
   const [open, setOpen] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameText, setNameText] = useState('')
+  const [savingName, setSavingName] = useState(false)
   const loc = useLocation()
   const project = projects.find((p) => p.id === currentProjectId)
   const page = PAGE_TITLES[loc.pathname] ?? ''
@@ -24,6 +27,20 @@ export function Navbar() {
   async function doLogout() {
     await signOut()
     clear()
+  }
+
+  async function saveName() {
+    const n = nameText.trim()
+    if (!n || n === profile?.name) { setEditingName(false); return }
+    setSavingName(true)
+    try {
+      await updateName(n)
+      setEditingName(false)
+    } catch {
+      /* 失败保持编辑态 */
+    } finally {
+      setSavingName(false)
+    }
   }
 
   return (
@@ -42,9 +59,35 @@ export function Navbar() {
             <Avatar profile={profile} size="lg" />
           </button>
           {open && (
-            <div className="menu-pop" onMouseLeave={() => setOpen(false)}>
-              <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--j-border)' }}>
-                <div style={{ fontWeight: 600 }}>{profile?.name}</div>
+            <div className="menu-pop" onMouseLeave={() => { setOpen(false); setEditingName(false) }}>
+              <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--j-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {editingName ? (
+                  <input
+                    autoFocus
+                    value={nameText}
+                    disabled={savingName}
+                    onChange={(e) => setNameText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveName()
+                      if (e.key === 'Escape') setEditingName(false)
+                    }}
+                    onBlur={saveName}
+                    style={{ flex: 1, padding: '4px 6px' }}
+                    placeholder="输入新用户名，回车保存"
+                  />
+                ) : (
+                  <>
+                    <div style={{ fontWeight: 600, flex: 1 }}>{profile?.name}</div>
+                    <button
+                      className="btn btn-subtle btn-sm"
+                      title="修改用户名"
+                      onClick={() => { setNameText(profile?.name ?? ''); setEditingName(true) }}
+                      style={{ padding: '0 4px' }}
+                    >
+                      ✏️
+                    </button>
+                  </>
+                )}
               </div>
               <button onClick={doLogout}>Log out</button>
             </div>

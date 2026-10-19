@@ -25,6 +25,7 @@ import { createIssue, computeRank } from '../api/issues'
 import { createSprint, startSprint, completeSprint } from '../api/sprints'
 import { Avatar } from '../components/Avatar'
 import { IssueModal } from '../components/IssueModal'
+import { SprintModal } from '../components/SprintModal'
 
 const STATUS_COLORS: Record<string, string> = {
   todo: '#42526e',
@@ -75,6 +76,7 @@ function Group({
   issues,
   onOpen,
   onAdd,
+  onEdit,
   headerExtra,
 }: {
   id: string
@@ -83,6 +85,7 @@ function Group({
   issues: Issue[]
   onOpen: (i: Issue) => void
   onAdd: (title: string) => void
+  onEdit?: () => void
   headerExtra?: React.ReactNode
 }) {
   const [adding, setAdding] = useState(false)
@@ -99,9 +102,19 @@ function Group({
   return (
     <div className={id === 'backlog' ? 'backlog-block' : 'sprint-block'}>
       <div className="block-head">
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span className="title">{title}</span>{' '}
           {meta && <span className="meta">{meta}</span>}
+          {onEdit && (
+            <button
+              className="btn btn-subtle btn-sm"
+              title="编辑 Sprint"
+              onClick={onEdit}
+              style={{ padding: '0 4px' }}
+            >
+              ✏️
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {headerExtra}
@@ -145,6 +158,7 @@ export function Backlog() {
   const { currentProjectId, sprints, issues, reloadBoard, patchIssueOptimistic, upsertIssueLocal, upsertSprintLocal } = useData()
   const [active, setActive] = useState<Issue | null>(null)
   const [opened, setOpened] = useState<Issue | null>(null)
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   // 分组：每个未完成 sprint 一组 + backlog 一组
@@ -266,6 +280,7 @@ export function Backlog() {
             issues={grouped[s.id] ?? []}
             onOpen={setOpened}
             onAdd={(t) => addIssue(s.id, t)}
+            onEdit={() => setEditingSprint(s)}
             headerExtra={
               s.status === 'future' ? (
                 <button className="btn btn-sm btn-primary" onClick={() => onStartSprint(s)}>Start sprint</button>
@@ -299,6 +314,12 @@ export function Backlog() {
       </DndContext>
 
       {opened && <IssueModal issue={issues.find((i) => i.id === opened.id) ?? opened} onClose={() => setOpened(null)} />}
+      {editingSprint && (
+        <SprintModal
+          sprint={sprints.find((s) => s.id === editingSprint.id) ?? editingSprint}
+          onClose={() => setEditingSprint(null)}
+        />
+      )}
     </div>
   )
 }

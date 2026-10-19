@@ -43,6 +43,20 @@ export async function completeSprint(sprintId: string): Promise<Sprint> {
   return data as Sprint
 }
 
+export async function updateSprint(
+  sprintId: string,
+  patch: { name?: string; goal?: string | null; start_date?: string | null; end_date?: string | null; status?: 'future' | 'active' | 'completed' }
+): Promise<Sprint> {
+  const { data, error } = await supabase
+    .from('sprints')
+    .update(patch)
+    .eq('id', sprintId)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Sprint
+}
+
 export async function deleteSprint(sprintId: string): Promise<void> {
   const { error } = await supabase.from('sprints').delete().eq('id', sprintId)
   if (error) throw error

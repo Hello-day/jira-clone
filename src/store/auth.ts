@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import { getMyProfile, listProfiles } from '../api/auth'
+import { getMyProfile, listProfiles, updateMyName } from '../api/auth'
 import type { Profile } from '../types'
 
 interface AuthState {
@@ -11,6 +11,7 @@ interface AuthState {
   loading: boolean
   init: () => Promise<void>
   loadProfiles: () => Promise<void>
+  updateName: (name: string) => Promise<void>
   clear: () => void
 }
 
@@ -57,6 +58,17 @@ export const useAuth = create<AuthState>((set, get) => ({
     } catch {
       // RLS 或网络问题时静默
     }
+  },
+
+  updateName: async (name: string) => {
+    const uid = get().session?.user.id
+    if (!uid) return
+    const updated = await updateMyName(uid, name)
+    // 同步当前 profile 和用户列表里的那一项
+    set({
+      profile: updated,
+      profiles: get().profiles.map((p) => (p.id === uid ? updated : p)),
+    })
   },
 
   clear: () => set({ session: null, profile: null, profiles: [] }),
