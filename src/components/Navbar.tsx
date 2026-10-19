@@ -12,7 +12,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'My Dashboard',
 }
 
-export function Navbar() {
+export function Navbar({ onMenu, menuOpen }: { onMenu: () => void; menuOpen: boolean }) {
   const { profile, clear, updateName } = useAuth()
   const { projects, currentProjectId, reloadMembers } = useData()
   const [open, setOpen] = useState(false)
@@ -79,10 +79,21 @@ export function Navbar() {
 
   return (
     <div className="navbar">
-      <div className="crumbs">
-        {project ? `${project.name} / ${page}` : page}
+      <div className="navbar-left">
+        <button
+          type="button"
+          className="menu-btn"
+          aria-label={menuOpen ? '关闭菜单' : '打开菜单'}
+          aria-expanded={menuOpen}
+          onClick={onMenu}
+        >
+          <span className="menu-icon" />
+        </button>
+        <div className="crumbs">
+          {project ? `${project.name} / ${page}` : page}
+        </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div className="navbar-actions">
         {project && (
           <button className="btn btn-sm" onClick={() => setShowMembers(true)}>
             👥 成员

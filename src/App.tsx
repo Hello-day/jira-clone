@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './store/auth'
 import { useData } from './store/data'
 import { isSupabaseConfigured } from './lib/supabase'
@@ -7,7 +7,7 @@ import { Login } from './pages/Login'
 import { Backlog } from './pages/Backlog'
 import { Board } from './pages/Board'
 import { Dashboard } from './pages/Dashboard'
-import { Sidebar } from './components/Sidebar'
+import { Sidebar, MobileTabBar } from './components/Sidebar'
 import { Navbar } from './components/Navbar'
 import { NewProjectModal } from './components/NewProjectModal'
 
@@ -31,24 +31,52 @@ VITE_SUPABASE_ANON_KEY=eyJ...`}
 function Shell() {
   const { loadProjects: _lp, currentProjectId } = useData()
   const [showNewProject, setShowNewProject] = useState(false)
+  const [navOpen, setNavOpen] = useState(false)
+  const location = useLocation()
 
   useEffect(() => {
     useData.getState().loadProjects()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    setNavOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!navOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [navOpen])
 
   return (
-    <div className="app-shell">
-      <Sidebar onNewProject={() => setShowNewProject(true)} />
+    <div className={`app-shell${navOpen ? ' nav-open' : ''}`}>
+      <button
+        type="button"
+        className="nav-backdrop"
+        aria-label="关闭菜单"
+        tabIndex={navOpen ? 0 : -1}
+        onClick={() => setNavOpen(false)}
+      />
+      <Sidebar
+        onNewProject={() => {
+          setNavOpen(false)
+          setShowNewProject(true)
+        }}
+        onNavigate={() => setNavOpen(false)}
+      />
       <div className="main">
-        <Navbar />
+        <Navbar onMenu={() => setNavOpen((open) => !open)} menuOpen={navOpen} />
         <Routes>
           <Route path="/backlog" element={<Backlog />} />
           <Route path="/board" element={<Board />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="*" element={<Navigate to={currentProjectId ? '/board' : '/backlog'} replace />} />
         </Routes>
+        <MobileTabBar />
       </div>
       {showNewProject && <NewProjectModal onClose={() => setShowNewProject(false)} />}
     </div>

@@ -37,7 +37,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ width: 440 }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal modal-narrow" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2 style={{ margin: 0, fontSize: 18 }}>New project</h2>
           <button className="btn btn-subtle" onClick={onClose}>✕</button>
@@ -52,7 +52,7 @@ export function NewProjectModal({ onClose }: { onClose: () => void }) {
             <label>Key（任务编号前缀，如 PROJ-1）</label>
             <input value={key} onChange={(e) => setKey(e.target.value.toUpperCase())} placeholder="PROJ" maxLength={8} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <div className="modal-actions modal-actions-end">
             <button type="button" className="btn" onClick={onClose} disabled={busy}>Cancel</button>
             <button className="btn btn-primary" disabled={busy || !name.trim()}>Create</button>
           </div>

@@ -149,11 +149,11 @@ export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => vo
           <span>{reporter?.name ?? '—'}</span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
+        <div className="modal-actions">
           <button className="btn" onClick={remove} disabled={busy} style={{ color: 'var(--j-red)' }}>
             Delete
           </button>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="modal-actions-right">
             <button className="btn" onClick={onClose} disabled={busy}>Cancel</button>
             <button className="btn btn-primary" onClick={save} disabled={busy}>Save</button>
           </div>

@@ -154,18 +154,18 @@ export function Board() {
     await patchIssueOptimistic(activeId, { status: targetStatus, rank })
   }
 
-  if (!currentProjectId) return <div className="center-note">请先在左上角创建一个项目。</div>
+  if (!currentProjectId) return <div className="center-note">请从左侧菜单选择或新建一个项目。</div>
 
   return (
     <div className="page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+      <div className="page-head">
+        <div className="page-head-text">
           <h1>Board</h1>
           <div className="page-sub">
             {activeSprint ? `${activeSprint.name}${activeSprint.goal ? ' · ' + activeSprint.goal : ''}` : '没有进行中的 Sprint，显示所有 Sprint 任务。去 Backlog 开始一个 Sprint。'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <div className="assignee-filter">
           {projectMembers.map((p) => (
             <button
               key={p.id}

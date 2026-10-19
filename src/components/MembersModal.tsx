@@ -84,7 +84,7 @@ export function MembersModal({ project, onClose }: { project: Project; onClose: 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ width: 460 }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal modal-narrow" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2 style={{ margin: 0, fontSize: 18 }}>项目成员 · {project.name}</h2>
           <button className="btn btn-subtle" onClick={onClose}>✕</button>
@@ -98,8 +98,8 @@ export function MembersModal({ project, onClose }: { project: Project; onClose: 
 
         <div className="field">
           <label>添加成员</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <select value={pick} onChange={(e) => setPick(e.target.value)} style={{ flex: 1 }}>
+          <div className="field-inline">
+            <select value={pick} onChange={(e) => setPick(e.target.value)}>
               <option value="">选择一个用户…</option>
               {nonMembers.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>

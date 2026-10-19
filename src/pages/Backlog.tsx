@@ -101,8 +101,8 @@ function Group({
   return (
     <div className={id === 'backlog' ? 'backlog-block' : 'sprint-block'}>
       <div className="block-head">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span className="title">{title}</span>{' '}
+        <div className="block-title">
+          <span className="title">{title}</span>
           {meta && <span className="meta">{meta}</span>}
           {onEdit && (
             <button
@@ -115,7 +115,7 @@ function Group({
             </button>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="block-actions">
           {headerExtra}
           <span className="meta">{issues.length} issues</span>
         </div>
@@ -272,7 +272,7 @@ export function Backlog() {
   }
 
   if (!currentProjectId) {
-    return <div className="center-note">请先在左上角创建一个项目。</div>
+    return <div className="center-note">请从左侧菜单选择或新建一个项目。</div>
   }
 
   return (
@@ -328,7 +328,7 @@ export function Backlog() {
           return (
             <div key={s.id} className="sprint-block sprint-block--completed">
               <div className="block-head">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="block-title">
                   <button
                     className="btn btn-subtle btn-sm"
                     onClick={() => setExpandedCompleted((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
@@ -339,7 +339,7 @@ export function Backlog() {
                   <span className="title" style={{ opacity: 0.6 }}>{s.name}</span>
                   <span className="meta">✓ 已完成</span>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div className="block-actions">
                   <span className="meta">{doneIssues.length} issues</span>
                   <button className="btn btn-sm btn-danger" onClick={() => onDeleteSprint(s)}>Delete</button>
                 </div>

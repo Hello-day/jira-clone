@@ -58,7 +58,7 @@ export function SprintModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" style={{ width: 460 }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal modal-narrow" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2 style={{ margin: 0, fontSize: 18 }}>编辑 Sprint</h2>
           <button className="btn btn-subtle" onClick={onClose}>✕</button>
@@ -97,7 +97,7 @@ export function SprintModal({
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+        <div className="modal-actions modal-actions-end">
           <button className="btn" onClick={onClose} disabled={busy}>取消</button>
           <button className="btn btn-primary" onClick={save} disabled={busy}>保存</button>
         </div>

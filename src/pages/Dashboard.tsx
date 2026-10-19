@@ -37,7 +37,7 @@ export function Dashboard() {
   const totalRemaining = mine.filter((i) => i.status !== 'done').reduce((s, i) => s + (i.remaining_hours ?? i.estimated_hours ?? 0), 0)
   const totalDoneHours = done.reduce((s, i) => s + (i.estimated_hours ?? 0), 0)
 
-  if (!currentProjectId) return <div className="center-note">请先在左上角创建一个项目。</div>
+  if (!currentProjectId) return <div className="center-note">请从左侧菜单选择或新建一个项目。</div>
 
   return (
     <div className="page">
