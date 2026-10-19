@@ -31,17 +31,12 @@ VITE_SUPABASE_ANON_KEY=eyJ...`}
 function Shell() {
   const { loadProjects: _lp, projects, currentProjectId } = useData()
   const [showNewProject, setShowNewProject] = useState(false)
-  const [projectsLoaded, setProjectsLoaded] = useState(false)
 
   useEffect(() => {
-    useData.getState().loadProjects().then(() => setProjectsLoaded(true))
+    useData.getState().loadProjects()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 只有在加载完成后、且确实没有任何项目时才弹出
-  useEffect(() => {
-    if (projectsLoaded && projects.length === 0) setShowNewProject(true)
-  }, [projectsLoaded, projects.length])
 
   return (
     <div className="app-shell">
