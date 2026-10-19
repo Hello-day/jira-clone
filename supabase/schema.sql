@@ -63,7 +63,7 @@ create table if not exists public.issues (
   type          text not null default 'task' check (type in ('epic','story','task','bug')),
   title         text not null,
   description   text,
-  status        text not null default 'todo' check (status in ('todo','in_progress','in_review','done')),
+  status        text not null default 'todo' check (status in ('todo','in_progress','done')),
   priority      text not null default 'medium' check (priority in ('highest','high','medium','low','lowest')),
   assignee_id   uuid references public.profiles(id) on delete set null,
   reporter_id   uuid references public.profiles(id) on delete set null,
