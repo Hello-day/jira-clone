@@ -29,7 +29,7 @@ VITE_SUPABASE_ANON_KEY=eyJ...`}
 }
 
 function Shell() {
-  const { loadProjects: _lp, projects, currentProjectId } = useData()
+  const { loadProjects: _lp, currentProjectId } = useData()
   const [showNewProject, setShowNewProject] = useState(false)
 
   useEffect(() => {
