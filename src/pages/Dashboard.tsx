@@ -30,7 +30,7 @@ export function Dashboard() {
   const mine = useMemo(() => issues.filter((i) => i.assignee_id === uid), [issues, uid])
 
   const todo = mine.filter((i) => i.status === 'todo')
-  const inProgress = mine.filter((i) => i.status === 'in_progress' || i.status === 'in_review')
+  const inProgress = mine.filter((i) => i.status === 'in_progress')
   const done = mine.filter((i) => i.status === 'done')
 
   const totalEstimated = mine.reduce((s, i) => s + (i.estimated_hours ?? 0), 0)
@@ -84,7 +84,7 @@ export function Dashboard() {
 
         <div className="dash-col">
           <h3>
-            进行中 / 评审中 <span className="count">{inProgress.length}</span>
+            进行中 <span className="count">{inProgress.length}</span>
           </h3>
           {inProgress.length === 0 && <div className="drop-empty">没有进行中的任务</div>}
           {inProgress.map((i) => <MiniRow key={i.id} issue={i} onOpen={setOpened} />)}

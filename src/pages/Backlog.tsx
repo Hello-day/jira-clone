@@ -30,7 +30,6 @@ import { SprintModal } from '../components/SprintModal'
 const STATUS_COLORS: Record<string, string> = {
   todo: '#42526e',
   in_progress: '#0052cc',
-  in_review: '#6554c0',
   done: '#36b37e',
 }
 
