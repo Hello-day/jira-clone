@@ -58,9 +58,9 @@ export function Navbar() {
     }
   }
 
-  async function doLogout() {
-    try { await signOut() } catch { /* 本地/网络异常时也要清除本地状态 */ }
+  function doLogout() {
     clear()
+    signOut().catch(() => {})
   }
 
   async function saveName() {
