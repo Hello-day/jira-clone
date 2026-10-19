@@ -88,8 +88,9 @@ function Column({
 }
 
 export function Board() {
-  const { currentProjectId, sprints, issues, patchIssueOptimistic } = useData()
+  const { currentProjectId, sprints, issues, memberIds, patchIssueOptimistic } = useData()
   const { profiles } = useAuth()
+  const projectMembers = useMemo(() => profiles.filter((p) => memberIds.includes(p.id)), [profiles, memberIds])
   const [active, setActive] = useState<Issue | null>(null)
   const [opened, setOpened] = useState<Issue | null>(null)
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null)
@@ -156,7 +157,7 @@ export function Board() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {profiles.map((p) => (
+          {projectMembers.map((p) => (
             <button
               key={p.id}
               onClick={() => setFilterAssignee(filterAssignee === p.id ? null : p.id)}

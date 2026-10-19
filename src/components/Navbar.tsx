@@ -14,7 +14,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export function Navbar() {
   const { profile, clear, updateName } = useAuth()
-  const { projects, currentProjectId } = useData()
+  const { projects, currentProjectId, reloadMembers } = useData()
   const [open, setOpen] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
   const [editingName, setEditingName] = useState(false)
@@ -152,7 +152,7 @@ export function Navbar() {
       </div>
 
       {showMembers && project && (
-        <MembersModal project={project} onClose={() => setShowMembers(false)} />
+        <MembersModal project={project} onClose={() => { setShowMembers(false); reloadMembers() }} />
       )}
     </div>
   )

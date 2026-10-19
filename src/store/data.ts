@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Issue, Project, Sprint } from '../types'
-import { listProjects } from '../api/projects'
+import { listProjects, listMemberIds } from '../api/projects'
 import { listSprints } from '../api/sprints'
 import { listIssues, updateIssue as apiUpdateIssue } from '../api/issues'
 
@@ -9,11 +9,13 @@ interface DataState {
   currentProjectId: string | null
   sprints: Sprint[]
   issues: Issue[]
+  memberIds: string[]
   loading: boolean
 
   loadProjects: () => Promise<void>
   selectProject: (id: string) => Promise<void>
   reloadBoard: () => Promise<void>
+  reloadMembers: () => Promise<void>
 
   // 乐观更新单个 issue（拖拽/编辑用）；失败时回滚并重载
   patchIssueOptimistic: (id: string, patch: Partial<Issue>) => Promise<void>
@@ -27,6 +29,7 @@ export const useData = create<DataState>((set, get) => ({
   currentProjectId: null,
   sprints: [],
   issues: [],
+  memberIds: [],
   loading: false,
 
   loadProjects: async () => {
@@ -45,8 +48,8 @@ export const useData = create<DataState>((set, get) => ({
   selectProject: async (id: string) => {
     set({ currentProjectId: id, loading: true })
     try {
-      const [sprints, issues] = await Promise.all([listSprints(id), listIssues(id)])
-      set({ sprints, issues, loading: false })
+      const [sprints, issues, memberIds] = await Promise.all([listSprints(id), listIssues(id), listMemberIds(id)])
+      set({ sprints, issues, memberIds, loading: false })
     } catch (e) {
       set({ loading: false })
       throw e
@@ -58,6 +61,13 @@ export const useData = create<DataState>((set, get) => ({
     if (!id) return
     const [sprints, issues] = await Promise.all([listSprints(id), listIssues(id)])
     set({ sprints, issues })
+  },
+
+  reloadMembers: async () => {
+    const id = get().currentProjectId
+    if (!id) return
+    const memberIds = await listMemberIds(id)
+    set({ memberIds })
   },
 
   patchIssueOptimistic: async (id, patch) => {
