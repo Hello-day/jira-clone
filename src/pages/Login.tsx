@@ -14,13 +14,18 @@ export function Login() {
     e.preventDefault()
     setErr(null)
     setNotice(null)
+    const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailReg.test(email)) {
+      setErr('请输入正确的邮箱格式')
+      return
+    }
     setBusy(true)
     try {
       if (mode === 'signup') {
         const res = await signUp(email, password, name || email.split('@')[0])
         if (!res.session) {
-          setNotice('注册成功。如果开启了邮箱验证，请查收邮件后再登录；否则直接登录。')
-          setMode('login')
+          // 邮箱验证已关闭但 session 未直接返回，自动登录
+          await signIn(email, password)
         }
       } else if (mode === 'reset') {
         await resetPassword(email)
