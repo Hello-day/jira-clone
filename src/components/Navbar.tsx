@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { useData } from '../store/data'
@@ -24,9 +24,22 @@ export function Navbar() {
   const [pwdText, setPwdText] = useState('')
   const [savingPwd, setSavingPwd] = useState(false)
   const [pwdErr, setPwdErr] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const loc = useLocation()
   const project = projects.find((p) => p.id === currentProjectId)
   const page = PAGE_TITLES[loc.pathname] ?? ''
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false)
+        setEditingName(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
 
   async function savePwd() {
     const p = pwdText.trim()
@@ -75,12 +88,12 @@ export function Navbar() {
             👥 成员
           </button>
         )}
-        <div className="user-menu">
+        <div className="user-menu" ref={menuRef}>
           <button className="btn-subtle" onClick={() => setOpen((o) => !o)} style={{ border: 'none', background: 'none' }}>
             <Avatar profile={profile} size="lg" />
           </button>
           {open && (
-            <div className="menu-pop" onMouseLeave={() => { setOpen(false); setEditingName(false) }}>
+            <div className="menu-pop">
               <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--j-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
                 {editingName ? (
                   <input
