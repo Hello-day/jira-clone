@@ -25,7 +25,7 @@ export function Navbar() {
   const page = PAGE_TITLES[loc.pathname] ?? ''
 
   async function doLogout() {
-    await signOut()
+    try { await signOut() } catch { /* 本地/网络异常时也要清除本地状态 */ }
     clear()
   }
 
@@ -71,7 +71,7 @@ export function Navbar() {
                       if (e.key === 'Enter') saveName()
                       if (e.key === 'Escape') setEditingName(false)
                     }}
-                    onBlur={saveName}
+                    onBlur={() => setEditingName(false)}
                     style={{ flex: 1, padding: '4px 6px' }}
                     placeholder="输入新用户名，回车保存"
                   />
