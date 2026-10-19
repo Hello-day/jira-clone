@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { signIn, signUp } from '../api/auth'
+import { signIn, signUp, resetPassword } from '../api/auth'
 
 export function Login() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -18,15 +18,17 @@ export function Login() {
     try {
       if (mode === 'signup') {
         const res = await signUp(email, password, name || email.split('@')[0])
-        // 若项目开启了邮箱验证，session 会为空
         if (!res.session) {
           setNotice('注册成功。如果开启了邮箱验证，请查收邮件后再登录；否则直接登录。')
           setMode('login')
         }
+      } else if (mode === 'reset') {
+        await resetPassword(email)
+        setNotice('重置密码邮件已发送，请查收邮件并点击链接。')
+        setMode('login')
       } else {
         await signIn(email, password)
       }
-      // 登录成功后由 auth store 的 onAuthStateChange 驱动跳转
     } catch (e: any) {
       setErr(e?.message ?? '操作失败')
     } finally {
@@ -38,7 +40,9 @@ export function Login() {
     <div className="login-wrap">
       <div className="login-card">
         <h1>Jira Clone</h1>
-        <div className="sub">{mode === 'login' ? '登录你的账号' : '创建新账号'}</div>
+        <div className="sub">
+          {mode === 'login' ? '登录你的账号' : mode === 'signup' ? '创建新账号' : '重置密码'}
+        </div>
 
         {err && <div className="err">{err}</div>}
         {notice && (
@@ -64,35 +68,50 @@ export function Login() {
               placeholder="you@example.com"
             />
           </div>
-          <div className="field">
-            <label>Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="至少 6 位"
-            />
-          </div>
+          {mode !== 'reset' && (
+            <div className="field">
+              <label>Password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="至少 6 位"
+              />
+            </div>
+          )}
           <button className="btn btn-primary" disabled={busy}>
-            {busy ? '请稍候…' : mode === 'login' ? 'Log in' : 'Sign up'}
+            {busy ? '请稍候…' : mode === 'login' ? 'Log in' : mode === 'signup' ? 'Sign up' : '发送重置邮件'}
           </button>
         </form>
 
         <div className="toggle">
-          {mode === 'login' ? (
+          {mode === 'login' && (
             <>
+              <a onClick={() => { setMode('reset'); setErr(null) }} style={{ cursor: 'pointer' }}>
+                忘记密码？
+              </a>
+              <span style={{ margin: '0 8px' }}>·</span>
               没有账号？{' '}
               <a onClick={() => { setMode('signup'); setErr(null) }} style={{ cursor: 'pointer' }}>
                 注册
               </a>
             </>
-          ) : (
+          )}
+          {mode === 'signup' && (
             <>
               已有账号？{' '}
               <a onClick={() => { setMode('login'); setErr(null) }} style={{ cursor: 'pointer' }}>
                 登录
+              </a>
+            </>
+          )}
+          {mode === 'reset' && (
+            <>
+              想起密码了？{' '}
+              <a onClick={() => { setMode('login'); setErr(null) }} style={{ cursor: 'pointer' }}>
+                返回登录
               </a>
             </>
           )}

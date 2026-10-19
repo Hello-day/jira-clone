@@ -46,6 +46,18 @@ export async function listProfiles(): Promise<Profile[]> {
 }
 
 // 更新当前用户的用户名（RLS 限制只能改自己的）
+export async function resetPassword(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname,
+  })
+  if (error) throw error
+}
+
+export async function updatePassword(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) throw error
+}
+
 export async function updateMyName(userId: string, name: string): Promise<Profile> {
   const { data, error } = await supabase
     .from('profiles')
