@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
-  MouseSensor,
-  TouchSensor,
+  PointerSensor,
   useSensor,
   useSensors,
   closestCorners,
@@ -95,62 +94,8 @@ export function Board() {
   const [active, setActive] = useState<Issue | null>(null)
   const [opened, setOpened] = useState<Issue | null>(null)
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
   const defaulted = useRef(false)
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
-  )
-
-  // 手机上列本身也会竖向滚动，系统往往把横向手势吃掉。
-  // 手指明显横滑时由看板自己滚到右边的列；按住不动再拖才交给拖拽。
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    let startX = 0
-    let startY = 0
-    let startLeft = 0
-    let axis: 'x' | 'y' | null = null
-    let hold = false
-    let timer = 0
-    const start = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return
-      startX = e.touches[0].clientX
-      startY = e.touches[0].clientY
-      startLeft = el.scrollLeft
-      axis = null
-      hold = false
-      window.clearTimeout(timer)
-      timer = window.setTimeout(() => { hold = true }, 160)
-    }
-    const move = (e: TouchEvent) => {
-      if (hold || e.touches.length !== 1) return
-      const dx = e.touches[0].clientX - startX
-      const dy = e.touches[0].clientY - startY
-      if (!axis) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
-        axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
-      }
-      if (axis !== 'x') return
-      if (e.cancelable) e.preventDefault()
-      el.scrollLeft = startLeft - dx
-    }
-    const end = () => {
-      window.clearTimeout(timer)
-      hold = false
-    }
-    el.addEventListener('touchstart', start, { passive: true })
-    el.addEventListener('touchmove', move, { passive: false })
-    el.addEventListener('touchend', end)
-    el.addEventListener('touchcancel', end)
-    return () => {
-      window.clearTimeout(timer)
-      el.removeEventListener('touchstart', start)
-      el.removeEventListener('touchmove', move)
-      el.removeEventListener('touchend', end)
-      el.removeEventListener('touchcancel', end)
-    }
-  }, [currentProjectId])
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   // 进入页面默认勾选自己（仅首次 profile 就绪时）
   useEffect(() => {
@@ -243,7 +188,7 @@ export function Board() {
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-        <div className="board-scroll" ref={scrollRef}>
+        <div className="board-scroll">
           <div className="board">
             {STATUS_ORDER.map((s) => (
               <Column key={s} status={s} issues={byStatus[s]} onOpen={setOpened} />
