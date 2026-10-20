@@ -421,13 +421,21 @@ textarea:focus {
 }
 
 /* ---- board ---- */
+.board-scroll {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
 .board {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
+  width: max-content;
+  min-width: 100%;
   padding-bottom: 4px;
 }
 .board-col {
@@ -788,15 +796,31 @@ textarea:focus {
     min-height: 36px;
   }
 
-  .board {
-    scroll-snap-type: x mandatory;
+  .page:has(.board-scroll) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .page:has(.board-scroll) .page-head {
+    flex-shrink: 0;
+  }
+  .board-scroll {
+    flex: 1;
+    min-height: 0;
+    scroll-snap-type: x proximity;
     scroll-padding-inline: 2px;
     margin-inline: -4px;
     padding-inline: 4px;
   }
+  .board {
+    height: 100%;
+    align-items: stretch;
+  }
   .board-col {
-    width: min(78vw, 280px);
-    max-height: calc(100dvh - 240px);
+    width: min(84vw, 320px);
+    max-height: none;
+    height: auto;
+    align-self: stretch;
     scroll-snap-align: start;
   }
   .block-actions .btn,
