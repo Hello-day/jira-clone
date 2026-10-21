@@ -1,24 +1,36 @@
 import { useEffect, useState } from 'react'
-import type { Issue } from '../types'
+import type { Issue, IssueStatus, Priority } from '../types'
 import { STATUS_LABELS, STATUS_ORDER, PRIORITY_LABELS, TYPE_META } from '../types'
 import { useAuth } from '../store/auth'
 import { useData } from '../store/data'
-import { deleteIssue } from '../api/issues'
+import { createIssue, deleteIssue, updateIssue } from '../api/issues'
 import { Avatar } from './Avatar'
 
 const PRIORITIES = Object.keys(PRIORITY_LABELS) as (keyof typeof PRIORITY_LABELS)[]
 
-export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => void }) {
-  const { profiles } = useAuth()
-  const { patchIssueOptimistic, removeIssueLocal, memberIds } = useData()
+export function IssueModal({
+  issue,
+  create,
+  onClose,
+  onCreated,
+}: {
+  issue?: Issue
+  create?: { sprintId: string | null }
+  onClose: () => void
+  onCreated?: (issue: Issue) => void
+}) {
+  const { profiles, session, profile } = useAuth()
+  const { currentProjectId, patchIssueOptimistic, removeIssueLocal, memberIds } = useData()
+  const isCreate = !issue
+  const myId = session?.user.id ?? ''
 
-  const [title, setTitle] = useState(issue.title)
-  const [description, setDescription] = useState(issue.description ?? '')
-  const [status, setStatus] = useState(issue.status)
-  const [priority, setPriority] = useState(issue.priority)
-  const [assignee, setAssignee] = useState(issue.assignee_id ?? '')
-  const [estimated, setEstimated] = useState<string>(issue.estimated_hours?.toString() ?? '')
-  const [remaining, setRemaining] = useState<string>(issue.remaining_hours?.toString() ?? '')
+  const [title, setTitle] = useState(issue?.title ?? '')
+  const [description, setDescription] = useState(issue?.description ?? '')
+  const [status, setStatus] = useState<IssueStatus>(issue?.status ?? 'todo')
+  const [priority, setPriority] = useState<Priority>(issue?.priority ?? 'medium')
+  const [assignee, setAssignee] = useState(issue?.assignee_id ?? (memberIds.includes(myId) ? myId : ''))
+  const [estimated, setEstimated] = useState<string>(issue?.estimated_hours?.toString() ?? '')
+  const [remaining, setRemaining] = useState<string>(issue?.remaining_hours?.toString() ?? '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
@@ -29,11 +41,33 @@ export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => vo
   }, [onClose])
 
   async function save() {
+    const nextTitle = title.trim()
+    if (isCreate && !nextTitle) return
     setBusy(true)
     setErr(null)
     try {
+      if (isCreate) {
+        if (!currentProjectId) throw new Error('请先选择项目')
+        let created = await createIssue({
+          projectId: currentProjectId,
+          type: 'task',
+          title: nextTitle,
+          sprintId: create?.sprintId ?? null,
+          assigneeId: assignee || null,
+          priority,
+          estimatedHours: estimated === '' ? null : Number(estimated),
+        })
+        const patch: Partial<Issue> = {}
+        if (description.trim()) patch.description = description.trim()
+        if (status !== 'todo') patch.status = status
+        if (remaining !== '') patch.remaining_hours = Number(remaining)
+        if (Object.keys(patch).length > 0) created = await updateIssue(created.id, patch)
+        onCreated?.(created)
+        onClose()
+        return
+      }
       await patchIssueOptimistic(issue.id, {
-        title: title.trim() || issue.title,
+        title: nextTitle || issue.title,
         description: description.trim() || null,
         status,
         priority,
@@ -50,6 +84,7 @@ export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => vo
   }
 
   async function remove() {
+    if (!issue) return
     if (!confirm('确定删除该任务？')) return
     setBusy(true)
     try {
@@ -61,15 +96,15 @@ export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => vo
     }
   }
 
-  const reporter = profiles.find((p) => p.id === issue.reporter_id)
+  const reporter = profiles.find((p) => p.id === (issue?.reporter_id ?? myId)) ?? (isCreate ? profile : undefined)
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--j-subtle)', fontWeight: 600 }}>
-            <span style={{ color: TYPE_META[issue.type].color }}>{TYPE_META[issue.type].icon}</span>
-            {issue.key}
+            <span style={{ color: TYPE_META[issue?.type ?? 'task'].color }}>{TYPE_META[issue?.type ?? 'task'].icon}</span>
+            {isCreate ? 'Create issue' : issue.key}
           </div>
           <button className="btn btn-subtle" onClick={onClose}>✕</button>
         </div>
@@ -82,7 +117,7 @@ export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => vo
 
         <div className="field">
           <label>Title</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input autoFocus={isCreate} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={isCreate ? '任务标题' : undefined} />
         </div>
 
         <div className="field">
@@ -150,12 +185,16 @@ export function IssueModal({ issue, onClose }: { issue: Issue; onClose: () => vo
         </div>
 
         <div className="modal-actions">
-          <button className="btn" onClick={remove} disabled={busy} style={{ color: 'var(--j-red)' }}>
-            Delete
-          </button>
+          {isCreate ? <span /> : (
+            <button className="btn" onClick={remove} disabled={busy} style={{ color: 'var(--j-red)' }}>
+              Delete
+            </button>
+          )}
           <div className="modal-actions-right">
             <button className="btn" onClick={onClose} disabled={busy}>Cancel</button>
-            <button className="btn btn-primary" onClick={save} disabled={busy}>Save</button>
+            <button className="btn btn-primary" onClick={save} disabled={busy || (isCreate && !title.trim())}>
+              {isCreate ? 'Create' : 'Save'}
+            </button>
           </div>
         </div>
       </div>

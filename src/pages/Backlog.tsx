@@ -19,9 +19,9 @@ import { CSS } from '@dnd-kit/utilities'
 import { format } from 'date-fns'
 import { useData } from '../store/data'
 import { useAuth } from '../store/auth'
-import type { Issue, IssueType, Sprint } from '../types'
+import type { Issue, Sprint } from '../types'
 import { STATUS_LABELS, TYPE_META } from '../types'
-import { createIssue, computeRank } from '../api/issues'
+import { computeRank } from '../api/issues'
 import { createSprint, startSprint, completeSprint, deleteSprint } from '../api/sprints'
 import { Avatar } from '../components/Avatar'
 import { IssueModal } from '../components/IssueModal'
@@ -74,7 +74,7 @@ function Group({
   meta,
   issues,
   onOpen,
-  onAdd,
+  onCreate,
   onEdit,
   headerExtra,
 }: {
@@ -83,20 +83,12 @@ function Group({
   meta?: string
   issues: Issue[]
   onOpen: (i: Issue) => void
-  onAdd: (title: string) => void
+  onCreate: () => void
   onEdit?: () => void
   headerExtra?: React.ReactNode
 }) {
-  const [adding, setAdding] = useState(false)
-  const [text, setText] = useState('')
   // 注册整个分组为放置目标，空分组也能接收拖入
   const { setNodeRef, isOver } = useDroppable({ id })
-
-  function submit() {
-    if (text.trim()) onAdd(text.trim())
-    setText('')
-    setAdding(false)
-  }
 
   return (
     <div className={id === 'backlog' ? 'backlog-block' : 'sprint-block'}>
@@ -128,26 +120,9 @@ function Group({
           ))}
         </SortableContext>
 
-        {adding ? (
-          <div className="inline-add">
-            <input
-              autoFocus
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submit()
-                if (e.key === 'Escape') { setAdding(false); setText('') }
-              }}
-              placeholder="任务标题，回车创建"
-            />
-            <button className="btn btn-sm btn-primary" onClick={submit}>Add</button>
-            <button className="btn btn-sm" onClick={() => { setAdding(false); setText('') }}>✕</button>
-          </div>
-        ) : (
-          <button className="btn btn-subtle btn-sm" style={{ margin: 6 }} onClick={() => setAdding(true)}>
-            + Create issue
-          </button>
-        )}
+        <button className="btn btn-subtle btn-sm" style={{ margin: 6 }} onClick={onCreate}>
+          + Create issue
+        </button>
       </div>
     </div>
   )
@@ -155,9 +130,9 @@ function Group({
 
 export function Backlog() {
   const { currentProjectId, sprints, issues, reloadBoard, patchIssueOptimistic, upsertIssueLocal, upsertSprintLocal, removeSprintLocal } = useData()
-  const { session } = useAuth()
   const [active, setActive] = useState<Issue | null>(null)
   const [opened, setOpened] = useState<Issue | null>(null)
+  const [creating, setCreating] = useState<{ sprintId: string | null } | null>(null)
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
   const [expandedCompleted, setExpandedCompleted] = useState<Record<string, boolean>>({})
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
@@ -224,16 +199,8 @@ export function Backlog() {
     await patchIssueOptimistic(issueId, { sprint_id: sprintId, rank })
   }
 
-  async function addIssue(group: string, title: string, type: IssueType = 'task') {
-    if (!currentProjectId) return
-    const created = await createIssue({
-      projectId: currentProjectId,
-      type,
-      title,
-      sprintId: group === 'backlog' ? null : group,
-      assigneeId: session?.user.id ?? null,
-    })
-    upsertIssueLocal(created)
+  function openCreate(group: string) {
+    setCreating({ sprintId: group === 'backlog' ? null : group })
   }
 
   async function onCreateSprint() {
@@ -295,7 +262,7 @@ export function Backlog() {
             }
             issues={grouped[s.id] ?? []}
             onOpen={setOpened}
-            onAdd={(t) => addIssue(s.id, t)}
+            onCreate={() => openCreate(s.id)}
             onEdit={() => setEditingSprint(s)}
             headerExtra={
               s.status === 'future' ? (
@@ -318,7 +285,7 @@ export function Backlog() {
           title="Backlog"
           issues={grouped.backlog}
           onOpen={setOpened}
-          onAdd={(t) => addIssue('backlog', t)}
+          onCreate={() => openCreate('backlog')}
           headerExtra={
             <button className="btn btn-sm" onClick={onCreateSprint}>+ Create sprint</button>
           }
@@ -377,6 +344,13 @@ export function Backlog() {
       </DndContext>
 
       {opened && <IssueModal issue={issues.find((i) => i.id === opened.id) ?? opened} onClose={() => setOpened(null)} />}
+      {creating && (
+        <IssueModal
+          create={creating}
+          onClose={() => setCreating(null)}
+          onCreated={(issue) => upsertIssueLocal(issue)}
+        />
+      )}
       {editingSprint && (
         <SprintModal
           sprint={sprints.find((s) => s.id === editingSprint.id) ?? editingSprint}
