@@ -155,6 +155,7 @@ function Group({
 
 export function Backlog() {
   const { currentProjectId, sprints, issues, reloadBoard, patchIssueOptimistic, upsertIssueLocal, upsertSprintLocal, removeSprintLocal } = useData()
+  const { session } = useAuth()
   const [active, setActive] = useState<Issue | null>(null)
   const [opened, setOpened] = useState<Issue | null>(null)
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
@@ -230,6 +231,7 @@ export function Backlog() {
       type,
       title,
       sprintId: group === 'backlog' ? null : group,
+      assigneeId: session?.user.id ?? null,
     })
     upsertIssueLocal(created)
   }
