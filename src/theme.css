@@ -557,8 +557,8 @@ textarea:focus {
   border-radius: 6px;
   width: 680px;
   max-width: 92vw;
-  max-height: 80vh;
-  overflow: auto;
+  max-height: 96vh;
+  overflow: hidden;
   padding: 20px 24px;
 }
 .modal .modal-head {

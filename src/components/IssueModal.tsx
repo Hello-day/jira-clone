@@ -122,7 +122,7 @@ export function IssueModal({
 
         <div className="field">
           <label>Description</label>
-          <textarea rows={5} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="添加描述…" />
+          <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="添加描述…" />
         </div>
 
         <div className="row-2">
