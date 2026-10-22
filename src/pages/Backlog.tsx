@@ -216,8 +216,9 @@ export function Backlog() {
 
   async function onStartSprint(s: Sprint) {
     const now = new Date()
-    const end = new Date(now.getTime() + 14 * 24 * 3600 * 1000)
-    const updated = await startSprint(s.id, now.toISOString(), end.toISOString())
+    const startDate = s.start_date ?? now.toISOString()
+    const endDate = s.end_date ?? new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString()
+    const updated = await startSprint(s.id, startDate, endDate)
     upsertSprintLocal(updated)
   }
 
