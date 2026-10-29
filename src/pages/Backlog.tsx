@@ -67,6 +67,27 @@ function IssueRow({ issue, onOpen }: { issue: Issue; onOpen: (i: Issue) => void 
   )
 }
 
+function CompletedIssueRow({ issue, onOpen }: { issue: Issue; onOpen: (i: Issue) => void }) {
+  const { profiles } = useAuth()
+  const assignee = profiles.find((p) => p.id === issue.assignee_id)
+  return (
+    <div className="issue-row" onClick={() => onOpen(issue)}>
+      <span className="type-icon" style={{ color: TYPE_META[issue.type].color }}>{TYPE_META[issue.type].icon}</span>
+      <span className="key">{issue.key}</span>
+      <span className="title">{issue.title}</span>
+      <span className="status-pill" style={{ background: STATUS_COLORS[issue.status] + '22', color: STATUS_COLORS[issue.status] }}>
+        {STATUS_LABELS[issue.status]}
+      </span>
+      {issue.estimated_hours != null && (
+        <span className="points" title="预估/剩余时长">
+          {issue.remaining_hours != null ? `${issue.remaining_hours}h / ${issue.estimated_hours}h` : `${issue.estimated_hours}h`}
+        </span>
+      )}
+      <Avatar profile={assignee} />
+    </div>
+  )
+}
+
 // 可放置的分组容器（sprint 或 backlog）
 function Group({
   id,
@@ -321,14 +342,7 @@ export function Backlog() {
                 <div className="block-body">
                   {doneIssues.length === 0 && <div className="drop-empty">没有已完成的任务</div>}
                   {doneIssues.map((i) => (
-                    <div key={i.id} className="issue-row" onClick={() => setOpened(i)}>
-                      <span className="type-icon" style={{ color: TYPE_META[i.type].color }}>{TYPE_META[i.type].icon}</span>
-                      <span className="key">{i.key}</span>
-                      <span className="title">{i.title}</span>
-                      <span className="status-pill" style={{ background: STATUS_COLORS[i.status] + '22', color: STATUS_COLORS[i.status] }}>
-                        {STATUS_LABELS[i.status]}
-                      </span>
-                    </div>
+                    <CompletedIssueRow key={i.id} issue={i} onOpen={setOpened} />
                   ))}
                 </div>
               )}
