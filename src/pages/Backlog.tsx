@@ -144,13 +144,16 @@ export function Backlog() {
   const grouped = useMemo(() => {
     const map: Record<string, Issue[]> = { backlog: [] }
     openSprints.forEach((s) => (map[s.id] = []))
+    const completedIds = new Set(completedSprints.map((s) => s.id))
     issues.forEach((i) => {
+      // 已完成 Sprint 里的完成任务只在下方折叠区展示，不再落入 Backlog
+      if (i.sprint_id && completedIds.has(i.sprint_id) && i.status === 'done') return
       const g = i.sprint_id && map[i.sprint_id] ? i.sprint_id : 'backlog'
       map[g].push(i)
     })
     Object.values(map).forEach((arr) => arr.sort((a, b) => a.rank - b.rank))
     return map
-  }, [issues, openSprints])
+  }, [issues, openSprints, completedSprints])
 
   function groupOf(issueId: string): string {
     const i = issues.find((x) => x.id === issueId)
