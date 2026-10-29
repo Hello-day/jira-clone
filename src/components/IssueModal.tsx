@@ -4,6 +4,7 @@ import { STATUS_LABELS, STATUS_ORDER, PRIORITY_LABELS, TYPE_META } from '../type
 import { useAuth } from '../store/auth'
 import { useData } from '../store/data'
 import { createIssue, deleteIssue, updateIssue } from '../api/issues'
+import { latestCompletedSprint } from '../api/sprints'
 import { Avatar } from './Avatar'
 
 const PRIORITIES = Object.keys(PRIORITY_LABELS) as (keyof typeof PRIORITY_LABELS)[]
@@ -20,7 +21,7 @@ export function IssueModal({
   onCreated?: (issue: Issue) => void
 }) {
   const { profiles, session, profile } = useAuth()
-  const { currentProjectId, patchIssueOptimistic, removeIssueLocal, memberIds } = useData()
+  const { currentProjectId, sprints, patchIssueOptimistic, removeIssueLocal, memberIds } = useData()
   const isCreate = !issue
   const myId = session?.user.id ?? ''
 
@@ -48,11 +49,15 @@ export function IssueModal({
     try {
       if (isCreate) {
         if (!currentProjectId) throw new Error('请先选择项目')
+        let sprintId = create?.sprintId ?? null
+        if (!sprintId && status === 'done') {
+          sprintId = latestCompletedSprint(sprints, currentProjectId)?.id ?? null
+        }
         let created = await createIssue({
           projectId: currentProjectId,
           type: 'task',
           title: nextTitle,
-          sprintId: create?.sprintId ?? null,
+          sprintId,
           assigneeId: assignee || null,
           priority,
           estimatedHours: estimated === '' ? null : Number(estimated),

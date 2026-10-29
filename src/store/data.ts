@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Issue, Project, Sprint } from '../types'
 import { listProjects, listMemberIds } from '../api/projects'
-import { listSprints } from '../api/sprints'
+import { adjustSprintForStatusChange, latestCompletedSprint, listSprints } from '../api/sprints'
 import { listIssues, updateIssue as apiUpdateIssue } from '../api/issues'
 
 interface DataState {
@@ -50,7 +50,7 @@ export const useData = create<DataState>((set, get) => ({
     set({ currentProjectId: id, loading: true })
     try {
       const [sprints, issues, memberIds] = await Promise.all([listSprints(id), listIssues(id), listMemberIds(id)])
-      set({ sprints, issues, memberIds, loading: false })
+      set({ sprints, issues: await foldLooseDoneIssues(sprints, issues), memberIds, loading: false })
     } catch (e) {
       set({ loading: false })
       throw e
@@ -61,7 +61,7 @@ export const useData = create<DataState>((set, get) => ({
     const id = get().currentProjectId
     if (!id) return
     const [sprints, issues] = await Promise.all([listSprints(id), listIssues(id)])
-    set({ sprints, issues })
+    set({ sprints, issues: await foldLooseDoneIssues(sprints, issues) })
   },
 
   reloadMembers: async () => {
@@ -73,9 +73,11 @@ export const useData = create<DataState>((set, get) => ({
 
   patchIssueOptimistic: async (id, patch) => {
     const prev = get().issues
-    set({ issues: prev.map((i) => (i.id === id ? { ...i, ...patch } : i)) })
+    const current = prev.find((i) => i.id === id)
+    const nextPatch = current ? adjustSprintForStatusChange(get().sprints, current, patch) : patch
+    set({ issues: prev.map((i) => (i.id === id ? { ...i, ...nextPatch } : i)) })
     try {
-      const updated = await apiUpdateIssue(id, patch)
+      const updated = await apiUpdateIssue(id, nextPatch)
       set({ issues: get().issues.map((i) => (i.id === id ? updated : i)) })
     } catch (e) {
       set({ issues: prev }) // 回滚
@@ -105,3 +107,21 @@ export const useData = create<DataState>((set, get) => ({
 
   removeSprintLocal: (id) => set({ sprints: get().sprints.filter((s) => s.id !== id) }),
 }))
+
+/** 已经完成、但还留在 Backlog 的任务，归入上一个已完成 Sprint。 */
+async function foldLooseDoneIssues(sprints: Sprint[], issues: Issue[]): Promise<Issue[]> {
+  const loose = issues.filter((i) => i.status === 'done' && !i.sprint_id)
+  if (loose.length === 0) return issues
+  const replacements = new Map<string, Issue>()
+  await Promise.all(loose.map(async (issue) => {
+    const target = latestCompletedSprint(sprints, issue.project_id)
+    if (!target) return
+    try {
+      replacements.set(issue.id, await apiUpdateIssue(issue.id, { sprint_id: target.id }))
+    } catch {
+      /* 下次进入项目再试 */
+    }
+  }))
+  if (replacements.size === 0) return issues
+  return issues.map((i) => replacements.get(i.id) ?? i)
+}
