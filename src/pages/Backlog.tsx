@@ -67,23 +67,28 @@ function IssueRow({ issue, onOpen }: { issue: Issue; onOpen: (i: Issue) => void 
   )
 }
 
-function CompletedIssueRow({ issue, onOpen }: { issue: Issue; onOpen: (i: Issue) => void }) {
-  const { profiles } = useAuth()
-  const assignee = profiles.find((p) => p.id === issue.assignee_id)
+// 仅在分组展开时挂载，折叠区域不注册为拖放目标。
+function GroupBody({ id, issues, onOpen, onCreate }: {
+  id: string
+  issues: Issue[]
+  onOpen: (i: Issue) => void
+  onCreate?: () => void
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+
   return (
-    <div className="issue-row" onClick={() => onOpen(issue)}>
-      <span className="type-icon" style={{ color: TYPE_META[issue.type].color }}>{TYPE_META[issue.type].icon}</span>
-      <span className="key">{issue.key}</span>
-      <span className="title">{issue.title}</span>
-      <span className="status-pill" style={{ background: STATUS_COLORS[issue.status] + '22', color: STATUS_COLORS[issue.status] }}>
-        {STATUS_LABELS[issue.status]}
-      </span>
-      {issue.estimated_hours != null && (
-        <span className="points" title="预估/剩余时长">
-          {issue.remaining_hours != null ? `${issue.remaining_hours}h / ${issue.estimated_hours}h` : `${issue.estimated_hours}h`}
-        </span>
+    <div className="block-body" ref={setNodeRef} style={isOver ? { background: 'rgba(0,82,204,0.08)' } : undefined}>
+      <SortableContext items={issues.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        {issues.length === 0 && <div className="drop-empty">把任务拖到这里</div>}
+        {issues.map((i) => (
+          <IssueRow key={i.id} issue={i} onOpen={onOpen} />
+        ))}
+      </SortableContext>
+      {onCreate && (
+        <button className="btn btn-subtle btn-sm" style={{ margin: 6 }} onClick={onCreate}>
+          + Create issue
+        </button>
       )}
-      <Avatar profile={assignee} />
     </div>
   )
 }
@@ -108,9 +113,6 @@ function Group({
   onEdit?: () => void
   headerExtra?: React.ReactNode
 }) {
-  // 注册整个分组为放置目标，空分组也能接收拖入
-  const { setNodeRef, isOver } = useDroppable({ id })
-
   return (
     <div className={id === 'backlog' ? 'backlog-block' : 'sprint-block'}>
       <div className="block-head">
@@ -133,18 +135,7 @@ function Group({
           <span className="meta">{issues.length} issues</span>
         </div>
       </div>
-      <div className="block-body" ref={setNodeRef} style={isOver ? { background: 'rgba(0,82,204,0.08)' } : undefined}>
-        <SortableContext items={issues.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          {issues.length === 0 && <div className="drop-empty">把任务拖到这里</div>}
-          {issues.map((i) => (
-            <IssueRow key={i.id} issue={i} onOpen={onOpen} />
-          ))}
-        </SortableContext>
-
-        <button className="btn btn-subtle btn-sm" style={{ margin: 6 }} onClick={onCreate}>
-          + Create issue
-        </button>
-      </div>
+      <GroupBody id={id} issues={issues} onOpen={onOpen} onCreate={onCreate} />
     </div>
   )
 }
@@ -158,23 +149,20 @@ export function Backlog() {
   const [expandedCompleted, setExpandedCompleted] = useState<Record<string, boolean>>({})
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  // 分组：每个未完成 sprint 一组 + backlog 一组
+  // 所有 Sprint 按实际归属分组，已完成 Sprint 展开后也可拖入任务。
   const openSprints = useMemo(() => sprints.filter((s) => s.status !== 'completed'), [sprints])
   const completedSprints = useMemo(() => sprints.filter((s) => s.status === 'completed'), [sprints])
 
   const grouped = useMemo(() => {
     const map: Record<string, Issue[]> = { backlog: [] }
-    openSprints.forEach((s) => (map[s.id] = []))
-    const completedIds = new Set(completedSprints.map((s) => s.id))
+    sprints.forEach((s) => (map[s.id] = []))
     issues.forEach((i) => {
-      // 已完成 Sprint 里的完成任务只在下方折叠区展示，不再落入 Backlog
-      if (i.sprint_id && completedIds.has(i.sprint_id) && i.status === 'done') return
       const g = i.sprint_id && map[i.sprint_id] ? i.sprint_id : 'backlog'
       map[g].push(i)
     })
     Object.values(map).forEach((arr) => arr.sort((a, b) => a.rank - b.rank))
     return map
-  }, [issues, openSprints, completedSprints])
+  }, [issues, sprints])
 
   function groupOf(issueId: string): string {
     const i = issues.find((x) => x.id === issueId)
@@ -198,7 +186,7 @@ export function Backlog() {
     let targetList: Issue[]
     const overId = over.id as string
 
-    if (overId === 'backlog' || openSprints.some((s) => s.id === overId)) {
+    if (overId === 'backlog' || sprints.some((s) => s.id === overId)) {
       // 落在空分组
       targetGroup = overId
       targetList = grouped[targetGroup].filter((i) => i.id !== activeId)
@@ -317,7 +305,7 @@ export function Backlog() {
         />
 
         {completedSprints.map((s) => {
-          const doneIssues = issues.filter((i) => i.sprint_id === s.id && i.status === 'done')
+          const sprintIssues = grouped[s.id] ?? []
           const expanded = !!expandedCompleted[s.id]
           return (
             <div key={s.id} className="sprint-block sprint-block--completed">
@@ -325,6 +313,8 @@ export function Backlog() {
                 <div className="block-title">
                   <button
                     className="btn btn-subtle btn-sm"
+                    aria-label={`${expanded ? '折叠' : '展开'} ${s.name}`}
+                    aria-expanded={expanded}
                     onClick={() => setExpandedCompleted((prev) => ({ ...prev, [s.id]: !prev[s.id] }))}
                     style={{ padding: '0 4px' }}
                   >
@@ -334,17 +324,12 @@ export function Backlog() {
                   <span className="meta">✓ 已完成</span>
                 </div>
                 <div className="block-actions">
-                  <span className="meta">{doneIssues.length} issues</span>
+                  <span className="meta">{sprintIssues.length} issues</span>
                   <button className="btn btn-sm btn-danger" onClick={() => onDeleteSprint(s)}>Delete</button>
                 </div>
               </div>
               {expanded && (
-                <div className="block-body">
-                  {doneIssues.length === 0 && <div className="drop-empty">没有已完成的任务</div>}
-                  {doneIssues.map((i) => (
-                    <CompletedIssueRow key={i.id} issue={i} onOpen={setOpened} />
-                  ))}
-                </div>
+                <GroupBody id={s.id} issues={sprintIssues} onOpen={setOpened} />
               )}
             </div>
           )
