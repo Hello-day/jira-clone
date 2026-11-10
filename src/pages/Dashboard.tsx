@@ -21,13 +21,27 @@ function MiniRow({ issue, onOpen }: { issue: Issue; onOpen: (i: Issue) => void }
 }
 
 export function Dashboard() {
-  const { issues, currentProjectId } = useData()
+  const { issues, sprints, currentProjectId } = useData()
   const { session, profile } = useAuth()
   const [opened, setOpened] = useState<Issue | null>(null)
   const uid = session?.user.id
 
-  // 当前用户被指派的任务（当前项目）
-  const mine = useMemo(() => issues.filter((i) => i.assignee_id === uid), [issues, uid])
+  const activeSprints = useMemo(
+    () => sprints.filter((s) => s.project_id === currentProjectId && s.status === 'active'),
+    [sprints, currentProjectId],
+  )
+
+  // 统计卡片和任务列表统一限定在当前项目进行中的 Sprint 内。
+  const mine = useMemo(() => {
+    if (!uid) return []
+    const activeSprintIds = new Set(activeSprints.map((s) => s.id))
+    return issues.filter((i) =>
+      i.project_id === currentProjectId &&
+      i.assignee_id === uid &&
+      i.sprint_id !== null &&
+      activeSprintIds.has(i.sprint_id),
+    )
+  }, [issues, uid, currentProjectId, activeSprints])
 
   const todo = mine.filter((i) => i.status === 'todo')
   const inProgress = mine.filter((i) => i.status === 'in_progress')
@@ -42,7 +56,11 @@ export function Dashboard() {
   return (
     <div className="page">
       <h1>👋 {profile?.name}，你好</h1>
-      <div className="page-sub">当前项目中指派给你的工作</div>
+      <div className="page-sub">
+        {activeSprints.length > 0
+          ? `仅统计进行中的 Sprint（${activeSprints.map((s) => s.name).join('、')}）中指派给你的任务`
+          : '当前项目没有进行中的 Sprint，请先在 Backlog 中开始一个 Sprint。'}
+      </div>
 
       <div className="stat-row">
         <div className="stat-card">
